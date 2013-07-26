@@ -315,8 +315,14 @@ case $action in
 		fi
 	;;
 	list)
-		echo "ID | State | Expiration date     | Revocation date     | Name"
-		echo "-----------+---------------------+----------------------+------------------------------"
+		if [ "$2" == "--csv" ]
+		then
+			CSV=1
+		else
+			CSV=0
+			echo "ID | State | Expiration date     | Revocation date     | Name"
+			echo "-----------+---------------------+----------------------+------------------------------"
+		fi
 		IFS="
 "
 		for line in $( cat $OSSL_INDEX )
@@ -325,15 +331,19 @@ case $action in
 			expdate=$( echo "$line"|cut -f2 )
 			expdate=$( to_humain_date $expdate )
 			revdate=$( echo "$line"|cut -f3 )
-			if [ "$revdate" == "" ]
-			then
-				revdate="                   "
-			else
-				revdate=$( to_humain_date $revdate )
-			fi
+			revdate=$( to_humain_date $revdate )
 			id=$( echo "$line"|cut -f4 )
 			fields=$( echo "$line"|cut -f6 )
 			cn=$( echo "$fields"|sed 's/^.*CN=\([^\/]*\).*$/\1/' )
+			if [ $CSV -eq 1 ]
+			then
+				echo "'$id';'$cn';'$state';'$expdate';'$revdate'"
+				continue
+			fi
+			if [ "$revdate" == "" ]
+			then
+				revdate="                   "
+			fi
 			echo "$id | $state     | $expdate | $revdate | $cn"
 		done
 	;;
