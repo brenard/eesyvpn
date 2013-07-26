@@ -48,6 +48,7 @@ function check_ca_structure() {
 	
 	[ ! -f $CACRT ] && echo "ERROR : Certification Authority certificate not found ($CACRT). Check your configuration" && exit 1
 	[ ! -f $CAKEY ] && echo "ERROR : Certification Authority key not found ($CAKEY). Check your configuration" && exit 1
+	return 0
 }
 
 function check_directories() {
@@ -61,7 +62,7 @@ function check_directories() {
 			echo done.
 		fi
 	done
-
+	return 0
 }
 
 function init_openssl_config() {
@@ -74,6 +75,7 @@ function init_openssl_config() {
 	sed -i "s/%%OU%%/$OSSL_VAR_OU/g" $OSSL_CNF
 	sed -i "s/%%EMAIL%%/$OSSL_VAR_EMAIL/g" $OSSL_CNF
 	echo done.
+	return 0
 }
 
 function check_openssl() {
@@ -82,12 +84,14 @@ function check_openssl() {
 	[ ! -f $OSSL_INDEX ] && echo "INFO : Initialize OpenSSL index file" && touch "$OSSL_INDEX"
 	[ ! -f $OSSL_SERIAL ] && echo "INFO : Initialize OpenSSL serial file" && echo -n 01 > $OSSL_SERIAL
 	[ ! -f $OSSL_DH1024 ] && echo "INFO : Generate OpenSSL dh1024.pem file" && openssl dhparam -out $OSSL_DH1024 1024
+	return 0
 }
 
 function check_openvpn() {
 	# OpenVPN
 	[ ! -d $OVPN_CNF_DIR ] && echo "INFO : Create OpenVPN configuration directory" && mkdir $OVPN_CNF_DIR
 	[ ! -f $OVPN_CNF_CLIENTS_TPL ] && echo "ERROR : OpenVPN configuration template file nod found ($OVPN_CNF_CLIENTS_TPL). Check your configuration" && exit 1
+	return 0
 }
 
 # Parameters
