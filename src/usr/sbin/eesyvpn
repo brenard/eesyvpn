@@ -203,7 +203,7 @@ case $action in
 		else
 			EXT=""
 		fi
-		openssl ca -config $OSSL_CNF $EXT -out $CRT_DIR/$name.crt -infiles $CSR_DIR/$name.csr
+		openssl ca -config $OSSL_CNF -batch $EXT -out $CRT_DIR/$name.crt -infiles $CSR_DIR/$name.csr
 		echo
 		echo "CA verifying : "
 		openssl verify -CAfile $CACRT $CRT_DIR/$name.crt
