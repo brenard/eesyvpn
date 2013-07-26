@@ -1,0 +1,18 @@
+This package was initiated by Benjamin Renard <brenard@easter-eggs.com> on
+Fri, 26 Jul 2013 15:47:48 +0200
+
+Copyright:
+
+    EesyVPN is copyright (C) 2013 Easter-eggs
+
+    This software is issued from GNU GENERAL PUBLIC LICENSE Version 3
+
+License:
+
+    You can use it under GNU GENERAL PUBLIC LICENSE Version 3 policy
+
+    For more information on GNU GENERAL PUBLIC LICENSE Version 3 policy,
+    please refer to COPYING.
+
+The Debian packaging is (C) 2013, Benjamin Renard <brenard@easter-eggs.com> and
+is licensed under the GPL, see `/usr/share/common-licenses/GPL'.7

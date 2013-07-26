@@ -1,0 +1,290 @@
+#!/bin/bash
+
+# Certification Authority
+CAHOME=/etc/openvpn/ca
+CRT_DIR=$CAHOME/certs
+CRT_REVOKED_DIR=$CRT_DIR/revoked
+KEY_DIR=$CAHOME/private
+CSR_DIR=$CAHOME/csr
+PEM_DIR=$CAHOME/pem
+CACRT=$CRT_DIR/ca.crt
+CAKEY=$KEY_DIR/ca.key
+CRL_DIR=$CAHOME/crl
+CRLPEM=$CRL_DIR/crl.pem
+NEW_CRT_DIR=$CAHOME/misc/ca.db.certs
+
+# OpenSSL
+OSSL_CNF_DIR=$CAHOME/openssl
+OSSL_CNF=$OSSL_CNF_DIR/openssl.conf
+OSSL_INDEX=$OSSL_CNF_DIR/index
+OSSL_SERIAL=$OSSL_CNF_DIR/serial
+OSSL_DH1024=$OSSL_CNF_DIR/dh1024.pem
+
+OSSL_VAR_C="FR"
+OSSL_VAR_ST="Ile de France"
+OSSL_VAR_L="Paris"
+OSSL_VAR_O="Easter-eggs"
+OSSL_VAR_OU="$OSSL_VAR_O"
+OSSL_VAR_EMAIL="postmaster@easter-eggs.com"
+
+[ ! -n "$OSSL_CERT_TYPE" ] && OSSL_CERT_TYPE="client, email"
+
+OSSL_CERT_SUBJ_FORMAT="/C=$OSSL_VAR_C/ST=$OSSL_VAR_ST/L=$OSSL_VAR_L/O=$OSSL_VAR_O/OU=$OSSL_VAR_OU/CN=%%CN%%/emailAddress=$OSSL_VAR_EMAIL"
+
+# OpenVPN
+OVPN_CNF_DIR=$CAHOME/openvpn
+OVPN_CNF_CLIENTS_DIR=$OVPN_CNF_DIR/clients
+OVPN_CNF_CLIENTS_ZIP_DIR=$OVPN_CNF_DIR/clients-zip
+OVPN_CNF_CLIENTS_TPL=$OVPN_CNF_DIR/client-cnf.tpl
+OVPN_SERVER_CNF=/etc/openvpn/eesyvpn.conf
+
+OVPN_EASYRSA_20_DIR=/usr/share/doc/openvpn/examples/easy-rsa/2.0
+
+[ -f /etc/eesyvpn/eesyvpn.conf ] && source /etc/eesyvpn/eesyvpn.conf
+
+function check_ca_structure() {
+	# Check structure
+	[ ! -d $CAHOME ] && echo "ERROR : Certification Authority directory not found ($CAHOME). Check your configuration" && exit 1
+	
+	[ ! -f $CACRT ] && echo "ERROR : Certification Authority certificate not found ($CACRT). Check your configuration" && exit 1
+	[ ! -f $CAKEY ] && echo "ERROR : Certification Authority key not found ($CAKEY). Check your configuration" && exit 1
+}
+
+function check_directories() {
+	# Create structural directories if not exists
+	for dir in $CAHOME $KEY_DIR $CRT_DIR $CRT_REVOKED_DIR $CSR_DIR $PEM_DIR $NEW_CRT_DIR $OVPN_CNF_DIR $OVPN_CNF_CLIENTS_DIR $OVPN_CNF_CLIENTS_ZIP_DIR $OSSL_CNF_DIR $CRL_DIR
+	do
+		if [ ! -d $dir ]
+		then
+			echo -n "  - create $dir : "
+			mkdir -p $dir
+			echo done.
+		fi
+	done
+
+}
+
+function init_openssl_config() {
+	echo -n "INFO : Initialize Certification Authority OpenSSL configuration ($OSSL_CNF) : "
+	cp /usr/share/doc/eesyvpn/example/openssl.cnf $OSSL_CNF
+	sed -i "s/%%C%%/$OSSL_VAR_C/g" $OSSL_CNF
+	sed -i "s/%%ST%%/$OSSL_VAR_ST/g" $OSSL_CNF
+	sed -i "s/%%L%%/$OSSL_VAR_L/g" $OSSL_CNF
+	sed -i "s/%%O%%/$OSSL_VAR_O/g" $OSSL_CNF
+	sed -i "s/%%OU%%/$OSSL_VAR_OU/g" $OSSL_CNF
+	sed -i "s/%%EMAIL%%/$OSSL_VAR_EMAIL/g" $OSSL_CNF
+	echo done.
+}
+
+function check_openssl() {
+	# OpenSSL
+	[ ! -f $OSSL_CNF ] && init_openssl_config
+	[ ! -f $OSSL_INDEX ] && echo "INFO : Initialize OpenSSL index file" && touch "$OSSL_INDEX"
+	[ ! -f $OSSL_SERIAL ] && echo "INFO : Initialize OpenSSL serial file" && echo -n 01 > $OSSL_SERIAL
+	[ ! -f $OSSL_DH1024 ] && echo "INFO : Generate OpenSSL dh1024.pem file" && openssl dhparam -out $OSSL_DH1024 1024
+}
+
+function check_openvpn() {
+	# OpenVPN
+	[ ! -d $OVPN_CNF_DIR ] && echo "INFO : Create OpenVPN configuration directory" && mkdir $OVPN_CNF_DIR
+	[ ! -f $OVPN_CNF_CLIENTS_TPL ] && echo "ERROR : OpenVPN configuration template file nod found ($OVPN_CNF_CLIENTS_TPL). Check your configuration" && exit 1
+}
+
+# Parameters
+action=$1
+name=$2
+
+function usage() {
+        echo "Usage: $0 {create|recreate|renew|revoke|sign|update-crl|makeconf|makezipconf} {CERTIFICATE_NAME}"
+	echo
+	echo "To initialize your CA, run $0 initialize [your.server.fqdn]"
+}
+
+if [ ! -n "$action" ]
+then
+	usage
+	exit 0
+fi
+
+if [ ! -n "$name" -a "$action" != "update-crl" ]
+then
+	echo CERTIFICATE_NAME not defined
+	usage
+        exit 0
+fi
+
+[ "$action" != "initialize" ] && check_openssl && check_directories && check_openvpn
+
+# Main
+case $action in
+	create)
+		if [ -f $CRT_DIR/$name.crt  -o -f $KEY_DIR/$name.key -o -f $PEM_DIR/$name.pem ]
+		then
+			echo "Name $name already used"
+			exit 1
+		fi
+
+		echo "Gen. key : "
+		openssl genrsa -out $KEY_DIR/$name.key 2048
+		echo done.
+		echo
+
+		echo "Gen. csr : "
+		SUBJ=$( echo "$OSSL_CERT_SUBJ_FORMAT"|sed "s/%%CN%%/$name/g" )
+		openssl req -new -key $KEY_DIR/$name.key -out $CSR_DIR/$name.csr -config $OSSL_CNF -subj "$SUBJ"
+		echo done.
+		echo
+		
+		$0 sign $name "$3"
+
+		if [ ! -f "$CRT_DIR/$name.crt" ]
+		then
+			echo "ERROR : Certificate file not found ($CRT_DIR/$name.crt)."
+			exit 1
+		fi
+
+		echo -n "Gen .pem : "
+		cat $KEY_DIR/$name.key >  $PEM_DIR/$name.pem
+		cat $CRT_DIR/$name.crt >> $PEM_DIR/$name.pem
+		echo done.
+
+		if [ "$3" != '--without-config' -a "$4" != '--without-config' ]
+		then
+			$0 makeconf $name
+			$0 makezipconf $name
+		fi
+	;;
+	renew|recreate)
+		if [ ! -f $CRT_DIR/$name.crt ]
+		then
+			echo "This name $name not currently exist"
+			exit 1
+		fi
+		$0 revoke $name
+		$0 sign $name "$3"
+		$0 makezipconf $name
+	;;
+	sign)
+		if [ ! -f $CSR_DIR/$name.csr ]
+		then
+			echo "CSR not found: $CSR_DIR/$name.csr"
+			exit 1
+		fi
+		if [ "$3" == "--server" ]
+		then
+			EXT="-extensions server"
+		else
+			EXT=""
+		fi
+		openssl ca -config $OSSL_CNF $EXT -out $CRT_DIR/$name.crt -infiles $CSR_DIR/$name.csr
+		echo
+		echo "CA verifying : "
+		openssl verify -CAfile $CACRT $CRT_DIR/$name.crt
+		echo
+	;;
+	revoke)
+		if [ ! -f $CRT_DIR/$name.crt ]
+		then
+			echo "CRT not found: $CRT_DIR/$name.crt"
+			exit 1
+		fi
+		echo "Revoke CRT : "
+		openssl ca -config $OSSL_CNF -revoke $CRT_DIR/$name.crt
+		echo done.
+		echo
+		echo -n "Move old certificate in revoked directory : "
+		rm -f $CRT_REVOKED_DIR/$name.crt
+		mv $CRT_DIR/$name.crt $CRT_REVOKED_DIR/
+		rm -f $PEM_DIR/$name.pem
+		echo done.
+
+		$0 update-crl
+	;;
+	update-crl)
+		echo "Update CRL ($CRLPEM) : "
+		openssl ca -gencrl -config $OSSL_CNF -crldays 31 -out $CRLPEM
+		echo done.
+	;;
+	makeconf)
+		ovpn=$OVPN_CNF_CLIENTS_DIR/$name.ovpn
+		echo "Make OpenVPN client config file : $ovpn"
+		cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/$name/g" > $ovpn
+		echo done.
+	;;
+	makezipconf)
+		zip=$OVPN_CNF_CLIENTS_ZIP_DIR/$name.zip
+		echo "Make OpenVPN client zip config file : $zip"
+		[ ! -f $OVPN_CNF_CLIENTS_DIR/$name.ovpn ] && $0 makeconf $name
+		zip -r $zip -j $CRT_DIR/$name.crt $KEY_DIR/$name.key $OVPN_CNF_CLIENTS_DIR/$name.ovpn $CACRT $OVPN_CLIENT_INSTALLER
+		echo done.
+	;;
+	initialize)
+		echo "Initialize CA with servername $name :"
+		[ ! -d "$OVPN_EASYRSA_20_DIR" ] && echo "ERROR : OpenVPN Easy RSA 2.0 directory not found ($OVPN_EASYRSA_20_DIR). Check your configuration." && exit 1
+		EEKEY_DIR=$KEY_DIR
+		cd "$OVPN_EASYRSA_20_DIR"
+		echo "Initialize variables :"
+		source ./vars
+		export KEY_COUNTRY="$OSSL_VAR_C"
+		export KEY_PROVINCE="$OSSL_VAR_ST"
+		export KEY_CITY="$OSSL_VAR_L"
+		export KEY_ORG="$OSSL_VAR_O"
+		export KEY_EMAIL="$OSSL_VAR_EMAIL"
+		export KEY_CN="$name"
+		export KEY_NAME="$name"
+		export KEY_OU="$OSSL_VAR_OU"
+
+		echo "Clean previous generated CA and build a new one : "
+		./clean-all
+		./build-ca
+
+		KEY_DIR=$EEKEY_DIR
+		echo "Structural directories of CA : "
+		check_directories
+		echo done.
+		
+		echo "Copy generated files in CA directory :"
+		echo -n "  - Key ($CAKEY) : "
+		cp keys/ca.key $CAKEY
+		echo done.
+
+		echo -n "  - Certificate ($CACRT) : "
+		cp keys/ca.crt $CACRT
+		echo done.
+
+		echo -n "  - Index ($OSSL_INDEX) : "
+		cp keys/index.txt $OSSL_INDEX
+		echo done.
+
+		echo -n "  - Serial ($OSSL_SERIAL) : "
+		cp keys/serial $OSSL_SERIAL
+		echo done.
+
+		if [ ! -f "$OVPN_CNF_CLIENTS_TPL" ]
+		then
+			echo -n "Create client template configuration : "
+			cp /usr/share/doc/eesyvpn/example/client-cnf.tpl $OVPN_CNF_CLIENTS_TPL
+			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
+			echo done.
+		fi
+
+		$0 update-crl
+
+		if [ ! -f "$OVPN_SERVER_CNF" ]
+		then
+			echo -n "Create server configuration : "
+			cp /usr/share/doc/eesyvpn/example/eesyvpn.conf $OVPN_SERVER_CNF
+			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_SERVER_CNF
+			echo done.
+
+			$0 create "$name" --server --without-config
+
+			/etc/init.d/openvpn start $( basename $OVPN_SERVER_CNF|sed 's/\.conf$//' )
+		fi
+	;;
+        *)
+		echo "Invalid Action"
+                usage
+                exit 0
+        ;;
+esac

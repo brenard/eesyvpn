@@ -1,0 +1,63 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+build: 
+	echo "Nothing here"
+
+clean:
+	dh_testdir
+	dh_testroot
+
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+
+	cp -fr $(CURDIR)/src/etc/eesyvpn/* $(CURDIR)/debian/eesyvpn/etc/eesyvpn/
+	find $(CURDIR)/debian/eesyvpn/etc/eesyvpn/ -name '*~' -exec rm -f {} \;
+	cp -fr $(CURDIR)/src/usr/sbin/eesyvpn $(CURDIR)/debian/eesyvpn/usr/sbin/
+	cp -fr $(CURDIR)/src/usr/share/doc/eesyvpn/example/* $(CURDIR)/debian/eesyvpn/usr/share/doc/eesyvpn/example/
+	find $(CURDIR)/debian/eesyvpn/usr/share/doc/eesyvpn/example/ -name '*~' -exec rm -f {} \;
+	
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_installdocs
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+#	dh_installchangelogs ChangeLog
+#	dh_installexamples
+#	dh_install
+#	dh_installmenu
+#	dh_installdebconf
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_python
+#	dh_installinit
+#	dh_installcron
+#	dh_installinfo
+#	dh_installman
+	dh_link
+	dh_strip
+#	dh_compress
+	dh_fixperms
+#	dh_perl
+#	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure
