@@ -5,8 +5,11 @@ CAHOME=/etc/openvpn/ca
 CRT_DIR=$CAHOME/certs
 CRT_REVOKED_DIR=$CRT_DIR/revoked
 KEY_DIR=$CAHOME/private
+KEY_REVOKED_DIR=$KEY_DIR/revoked
 CSR_DIR=$CAHOME/csr
+CSR_REVOKED_DIR=$CSR_DIR/revoked
 PEM_DIR=$CAHOME/pem
+PEM_REVOKED_DIR=$PEM_DIR/revoked
 CACRT=$CRT_DIR/ca.crt
 CAKEY=$KEY_DIR/ca.key
 CRL_DIR=$CAHOME/crl
@@ -53,7 +56,7 @@ function check_ca_structure() {
 
 function check_directories() {
 	# Create structural directories if not exists
-	for dir in $CAHOME $KEY_DIR $CRT_DIR $CRT_REVOKED_DIR $CSR_DIR $PEM_DIR $NEW_CRT_DIR $OVPN_CNF_DIR $OVPN_CNF_CLIENTS_DIR $OVPN_CNF_CLIENTS_ZIP_DIR $OSSL_CNF_DIR $CRL_DIR
+	for dir in $CAHOME $KEY_DIR $KEY_REVOKED_DIR $CRT_DIR $CRT_REVOKED_DIR $CSR_DIR $CSR_REVOKED_DIR $PEM_DIR $PEM_REVOKED_DIR $NEW_CRT_DIR $OVPN_CNF_DIR $OVPN_CNF_CLIENTS_DIR $OVPN_CNF_CLIENTS_ZIP_DIR $OSSL_CNF_DIR $CRL_DIR
 	do
 		if [ ! -d $dir ]
 		then
@@ -197,9 +200,10 @@ case $action in
 		echo done.
 		echo
 		echo -n "Move old certificate in revoked directory : "
-		rm -f $CRT_REVOKED_DIR/$name.crt
-		mv $CRT_DIR/$name.crt $CRT_REVOKED_DIR/
-		rm -f $PEM_DIR/$name.pem
+		mv -f $CRT_DIR/$name.crt $CRT_REVOKED_DIR/
+		mv -f $PEM_DIR/$name.pem $PEM_REVOKED_DIR/
+		mv -f $KEY_DIR/$name.key $KEY_REVOKED_DIR/
+		mv -f $CSR_DIR/$name.csr $CSR_REVOKED_DIR/
 		echo done.
 
 		$0 update-crl
