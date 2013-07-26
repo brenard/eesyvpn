@@ -70,7 +70,7 @@ function check_directories() {
 
 function init_openssl_config() {
 	echo -n "INFO : Initialize Certification Authority OpenSSL configuration ($OSSL_CNF) : "
-	cp /usr/share/doc/eesyvpn/example/openssl.cnf $OSSL_CNF
+	cp /usr/share/doc/eesyvpn/example/openssl.conf $OSSL_CNF
 	sed -i "s/%%C%%/$OSSL_VAR_C/g" $OSSL_CNF
 	sed -i "s/%%ST%%/$OSSL_VAR_ST/g" $OSSL_CNF
 	sed -i "s/%%L%%/$OSSL_VAR_L/g" $OSSL_CNF
