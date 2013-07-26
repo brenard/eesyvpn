@@ -97,6 +97,10 @@ function check_openvpn() {
 	return 0
 }
 
+function to_humain_date() {
+	echo $1|sed 's/\([0-9][0-9]\)\([0-9][0-9]\)\([0-9][0-9]\)\([0-9][0-9]\)\([0-9][0-9]\)\([0-9][0-9]\)Z/20\1\/\2\/\3 \4:\5:\6/'
+}
+
 # Parameters
 action=$1
 name=$2
@@ -113,7 +117,7 @@ then
 	exit 0
 fi
 
-if [ ! -n "$name" -a "$action" != "update-crl" ]
+if [ ! -n "$name" -a "$action" != "update-crl" -a "$action" != "list" ]
 then
 	echo CERTIFICATE_NAME not defined
 	usage
@@ -309,6 +313,29 @@ case $action in
 
 			/etc/init.d/openvpn start $( basename $OVPN_SERVER_CNF|sed 's/\.conf$//' )
 		fi
+	;;
+	list)
+		echo "ID | State | Expiration date     | Revocation date     | Name"
+		echo "-----------+---------------------+----------------------+------------------------------"
+		IFS="
+"
+		for line in $( cat $OSSL_INDEX )
+		do
+			state=$( echo "$line"| cut -f1 )
+			expdate=$( echo "$line"|cut -f2 )
+			expdate=$( to_humain_date $expdate )
+			revdate=$( echo "$line"|cut -f3 )
+			if [ "$revdate" == "" ]
+			then
+				revdate="                   "
+			else
+				revdate=$( to_humain_date $revdate )
+			fi
+			id=$( echo "$line"|cut -f4 )
+			fields=$( echo "$line"|cut -f6 )
+			cn=$( echo "$fields"|sed 's/^.*CN=\([^\/]*\).*$/\1/' )
+			echo "$id | $state     | $expdate | $revdate | $cn"
+		done
 	;;
         *)
 		echo "Invalid Action"
