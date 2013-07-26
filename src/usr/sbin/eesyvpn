@@ -131,12 +131,27 @@ case $action in
 			exit 1
 		fi
 
-		echo "Gen. key : "
+		echo "Generate key file : "
 		openssl genrsa -out $KEY_DIR/$name.key 2048
 		echo done.
 		echo
 
-		echo "Gen. csr : "
+		$0 makecert "$name" "$3"
+
+		if [ "$3" != '--without-config' -a "$4" != '--without-config' -a "$3" != '--server' ]
+		then
+			$0 makeconf $name
+			$0 makezipconf $name
+		fi
+	;;
+	makecert)
+		if [ ! -f $KEY_DIR/$name.key ]
+		then
+			echo "Key file of $name not found"
+			exit 1
+		fi
+
+		echo -n "Generate csr file : "
 		SUBJ=$( echo "$OSSL_CERT_SUBJ_FORMAT"|sed "s/%%CN%%/$name/g" )
 		openssl req -new -key $KEY_DIR/$name.key -out $CSR_DIR/$name.csr -config $OSSL_CNF -subj "$SUBJ"
 		echo done.
@@ -150,25 +165,30 @@ case $action in
 			exit 1
 		fi
 
-		echo -n "Gen .pem : "
+		echo -n "Generate pem file : "
 		cat $KEY_DIR/$name.key >  $PEM_DIR/$name.pem
 		cat $CRT_DIR/$name.crt >> $PEM_DIR/$name.pem
 		echo done.
-
-		if [ "$3" != '--without-config' -a "$4" != '--without-config' ]
-		then
-			$0 makeconf $name
-			$0 makezipconf $name
-		fi
 	;;
-	renew|recreate)
+	recreate)
 		if [ ! -f $CRT_DIR/$name.crt ]
 		then
 			echo "This name $name not currently exist"
 			exit 1
 		fi
 		$0 revoke $name
-		$0 sign $name "$3"
+		$0 create $name "$3"
+	;;
+	renew)
+		if [ ! -f $CRT_DIR/$name.crt ]
+		then
+			echo "This name $name not currently exist"
+			exit 1
+		fi
+		$0 revoke $name --preserve-key
+		$0 makecert $name "$3"
+
+		$0 makeconf $name
 		$0 makezipconf $name
 	;;
 	sign)
@@ -202,8 +222,8 @@ case $action in
 		echo -n "Move old certificate in revoked directory : "
 		mv -f $CRT_DIR/$name.crt $CRT_REVOKED_DIR/
 		mv -f $PEM_DIR/$name.pem $PEM_REVOKED_DIR/
-		mv -f $KEY_DIR/$name.key $KEY_REVOKED_DIR/
 		mv -f $CSR_DIR/$name.csr $CSR_REVOKED_DIR/
+		[ "$3" != "--preserve-key" ] && mv -f $KEY_DIR/$name.key $KEY_REVOKED_DIR/
 		echo done.
 
 		$0 update-crl
