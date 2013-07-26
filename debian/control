@@ -5,7 +5,7 @@ Maintainer: Benjamin Renard <brenard@easter-eggs.com>
 
 Package: eesyvpn
 Architecture: all
-Depends: openvpn, openssl, zip
+Depends: openvpn, openssl, dos2unix, zip
 Maintainer: Benjamin Renard <brenard@easter-eggs.com>
 Description: Easy-to-use VPN solution based on OpenVPN
  EesyVPN is a "easy-to-use" VPN solution based on OpenVPN
