@@ -320,8 +320,8 @@ case $action in
 			CSV=1
 		else
 			CSV=0
-			echo "ID | State | Expiration date     | Revocation date     | Name"
-			echo "-----------+---------------------+----------------------+------------------------------"
+			echo "ID | State | Type   | Expiration date     | Revocation date     | Name"
+			echo "---+-------+--------+---------------------+---------------------+------------------------------"
 		fi
 		IFS="
 "
@@ -335,16 +335,23 @@ case $action in
 			id=$( echo "$line"|cut -f4 )
 			fields=$( echo "$line"|cut -f6 )
 			cn=$( echo "$fields"|sed 's/^.*CN=\([^\/]*\).*$/\1/' )
+			if [ $( openssl x509 -noout -text -in "$NEW_CRT_DIR/$id.pem"|grep -c "SSL Server" ) -eq 1 ]
+			then
+				typ="server"
+			else
+				typ="client"
+			fi
+
 			if [ $CSV -eq 1 ]
 			then
-				echo "'$id';'$cn';'$state';'$expdate';'$revdate'"
+				echo "'$id';'$cn';'$state';'$typ';'$expdate';'$revdate'"
 				continue
 			fi
 			if [ "$revdate" == "" ]
 			then
 				revdate="                   "
 			fi
-			echo "$id | $state     | $expdate | $revdate | $cn"
+			echo "$id | $state     | $typ | $expdate | $revdate | $cn"
 		done
 	;;
         *)
