@@ -354,6 +354,19 @@ case $action in
 			echo "$id | $state     | $typ | $expdate | $revdate | $cn"
 		done
 	;;
+	view)
+		if [ -f "$CRT_DIR/$name.crt" ]
+		then
+			crt="$CRT_DIR/$name.crt"
+		elif [ -f "$NEW_CRT_DIR/$name.pem" ]
+		then
+			crt="$NEW_CRT_DIR/$name.pem"
+		else
+			echo "Invalid name"
+			exit 1
+		fi
+		openssl x509 -noout -text -in "$crt"
+	;;
         *)
 		echo "Invalid Action"
                 usage
