@@ -367,6 +367,15 @@ case $action in
 		fi
 		openssl x509 -noout -text -in "$crt"
 	;;
+	namebyid)
+		if [ -f "$NEW_CRT_DIR/$name.pem" ]
+		then
+			openssl x509 -noout -text -in "$NEW_CRT_DIR/$name.pem"|grep Subject:|sed 's/^.*CN=\([^ ,]*\).*$/\1/'
+		else
+			echo "Invalid ID"
+			exit 1
+		fi
+	;;
         *)
 		echo "Invalid Action"
                 usage
