@@ -255,6 +255,30 @@ case $action in
 		[ ! -d "$OVPN_EASYRSA_20_DIR" ] && echo "ERROR : OpenVPN Easy RSA 2.0 directory not found ($OVPN_EASYRSA_20_DIR). Check your configuration." && exit 1
 		EEKEY_DIR=$KEY_DIR
 		cd "$OVPN_EASYRSA_20_DIR"
+
+		echo "Check OpenSSL configuration file : "
+		if [ ! -f openssl.cnf ]
+		then
+			echo -n "Check OpenSSL version : "
+			OSSL_VER=$( openssl version|cut -d' ' -f2 )
+			if [ -z "$OSSL_VER" ]
+			then
+				echo "Unable to detect OpenSSL version. Please enter OpenSSL version : "
+				read OSSL_VER
+			else
+				echo "$OSSL_VER"
+			fi
+
+			OSSL_C_FILE="openssl-$OSSL_VER.cnf"
+			if [ -f "$OSSL_C_FILE" ]
+			then
+				cp "$OSSL_C_FILE" openssl.cnf
+			else
+				echo "OpenSSL configuration file not found ($OSSL_C_FILE). Please put an OpenSSL configuration file adapted to your OpenSSL version ($OSSL_VER) in $OVPN_EASYRSA_20_DIR/openssl.cnf"
+				exit 1
+			fi
+		fi
+
 		echo "Initialize variables :"
 		source ./vars
 		export KEY_COUNTRY="$OSSL_VAR_C"
