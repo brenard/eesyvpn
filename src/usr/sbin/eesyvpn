@@ -77,6 +77,7 @@ function init_openssl_config() {
 	sed -i "s/%%O%%/$OSSL_VAR_O/g" $OSSL_CNF
 	sed -i "s/%%OU%%/$OSSL_VAR_OU/g" $OSSL_CNF
 	sed -i "s/%%EMAIL%%/$OSSL_VAR_EMAIL/g" $OSSL_CNF
+	sed -i "s@%%CAHOME%%@$OSSL_VAR_CAHOME@g" $OSSL_CNF
 	echo done.
 	return 0
 }
@@ -331,6 +332,9 @@ case $action in
 			echo -n "Create server configuration : "
 			cp /usr/share/doc/eesyvpn/example/eesyvpn.conf $OVPN_SERVER_CNF
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_SERVER_CNF
+			sed -i "s/%%VPN_NAME%%/$VPN_NAME/g" $OVPN_SERVER_CNF
+			sed -i "s/%%VPN_LOG_NAME%%/$VPN_LOG_NAME/g" $OVPN_SERVER_CNF
+			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
 
 			$0 create "$name" --server --without-config
