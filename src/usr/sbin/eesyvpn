@@ -248,7 +248,9 @@ case $action in
 		zip=$OVPN_CNF_CLIENTS_ZIP_DIR/$name.zip
 		echo "Make OpenVPN client zip config file : $zip"
 		[ ! -f $OVPN_CNF_CLIENTS_DIR/$name.ovpn ] && $0 makeconf $name
-		zip -r $zip -j $CRT_DIR/$name.crt $KEY_DIR/$name.key $OVPN_CNF_CLIENTS_DIR/$name.ovpn $CACRT $OVPN_CLIENT_INSTALLER
+		# Add ta.key if present
+		[ -f $KEY_DIR/ta.key ] && TAKEY=ta.key || TAKEY=""
+		zip -r $zip -j $CRT_DIR/$name.crt $KEY_DIR/$name.key $KEY_DIR/$TAKEY $OVPN_CNF_CLIENTS_DIR/$name.ovpn $CACRT $OVPN_CLIENT_INSTALLER
 		echo done.
 	;;
 	initialize)
@@ -280,7 +282,8 @@ case $action in
 			fi
 		fi
 
-		echo "Initialize variables :"
+		echo "Initialize SSL variables :"
+
 		source ./vars
 		export KEY_COUNTRY="$OSSL_VAR_C"
 		export KEY_PROVINCE="$OSSL_VAR_ST"
@@ -326,6 +329,11 @@ case $action in
 		fi
 
 		$0 update-crl
+
+		echo "Clean previous generated TA key and build an new one : "
+		[ -f $TA_KEY_DIR/ta.key ] && rm -f $TA_KEY_DIR/ta.key
+		openvpn --genkey --secret $TA_KEY_DIR/ta.key
+		echo done
 
 		if [ ! -f "$OVPN_SERVER_CNF" ]
 		then

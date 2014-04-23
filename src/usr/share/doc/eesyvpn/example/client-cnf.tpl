@@ -16,6 +16,7 @@ key %%CN%%.key
 cert %%CN%%.crt
 ca ca.crt
 cipher AES-256-CBC
+tls-auth ta.key 1
 
 comp-lzo
 verb 3
