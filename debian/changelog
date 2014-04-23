@@ -1,3 +1,10 @@
+eesyvpn (1.0-2) unstable; urgency=low
+
+  * Add variable to manage VPN name and home and log directory and config file
+  * Add ta.key management
+
+ -- Pascal Brugier <pbrugier@easter-eggs.com>  Wed, 23 Apr 2014 17:01:20 +0200
+
 eesyvpn (1.0-1) unstable; urgency=low
 
   * Initial Debian release
