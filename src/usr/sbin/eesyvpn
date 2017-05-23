@@ -1,7 +1,9 @@
 #!/bin/bash
 
+VPN_NAME="eesyvpn"
+
 # Certification Authority
-CAHOME=/etc/openvpn/ca
+CAHOME=/etc/eesyvpn/$VPN_NAME
 CRT_DIR=$CAHOME/certs
 CRT_REVOKED_DIR=$CRT_DIR/revoked
 KEY_DIR=$CAHOME/private
@@ -15,13 +17,22 @@ CAKEY=$KEY_DIR/ca.key
 CRL_DIR=$CAHOME/crl
 CRLPEM=$CRL_DIR/crl.pem
 NEW_CRT_DIR=$CAHOME/misc/ca.db.certs
+TA_KEY_DIR=$CAHOME/private
+TA_KEY=$TA_KEY_DIR/ta.key
+CCD_DIR=$CAHOME/ccd
+DH1024=$OSSL_CNF_DIR/dh1024.pem
+
+# Log configuration
+VPN_LOG_DIR="/var/log"
+VPN_LOG_NAME="openvpn-$VPN_NAME"
+VPN_LOG_FILE="$VPN_LOG_DIR/${VPN_LOG_NAME}.log"
+VPN_LOG_STATUS_FILE="$VPN_LOG_DIR/${VPN_LOG_NAME}-status.log"
 
 # OpenSSL
 OSSL_CNF_DIR=$CAHOME/openssl
 OSSL_CNF=$OSSL_CNF_DIR/openssl.conf
 OSSL_INDEX=$OSSL_CNF_DIR/index
 OSSL_SERIAL=$OSSL_CNF_DIR/serial
-OSSL_DH1024=$OSSL_CNF_DIR/dh1024.pem
 
 OSSL_VAR_C="FR"
 OSSL_VAR_ST="Ile de France"
@@ -29,6 +40,7 @@ OSSL_VAR_L="Paris"
 OSSL_VAR_O="Easter-eggs"
 OSSL_VAR_OU="$OSSL_VAR_O"
 OSSL_VAR_EMAIL="postmaster@easter-eggs.com"
+OSSL_VAR_CAHOME="$CAHOME"
 
 [ ! -n "$OSSL_CERT_TYPE" ] && OSSL_CERT_TYPE="client, email"
 
@@ -37,11 +49,11 @@ OSSL_CERT_SUBJ_FORMAT="/C=$OSSL_VAR_C/ST=$OSSL_VAR_ST/L=$OSSL_VAR_L/O=$OSSL_VAR_
 # OpenVPN
 OVPN_CNF_DIR=$CAHOME/openvpn
 OVPN_CNF_CLIENTS_DIR=$OVPN_CNF_DIR/clients
-OVPN_CNF_CLIENTS_ZIP_DIR=$OVPN_CNF_DIR/clients-zip
-OVPN_CNF_CLIENTS_TPL=$OVPN_CNF_DIR/client-cnf.tpl
-OVPN_SERVER_CNF=/etc/openvpn/eesyvpn.conf
+OVPN_CNF_CLIENTS_ZIP_DIR=$OVPN_CNF_CLIENTS_DIR
+OVPN_CNF_CLIENTS_TPL=$OVPN_CNF_DIR/client.ovpn.tpl
+OVPN_SERVER_CNF=$OVPN_CNF_DIR/openvpn.conf
+OVPN_SERVER_LINK=/etc/openvpn/${VPN_NAME}.conf
 
-OVPN_EASYRSA_20_DIR=/usr/share/doc/openvpn/examples/easy-rsa/2.0
 
 [ -f /etc/eesyvpn/eesyvpn.conf ] && source /etc/eesyvpn/eesyvpn.conf
 
@@ -56,12 +68,13 @@ function check_ca_structure() {
 
 function check_directories() {
 	# Create structural directories if not exists
-	for dir in $CAHOME $KEY_DIR $KEY_REVOKED_DIR $CRT_DIR $CRT_REVOKED_DIR $CSR_DIR $CSR_REVOKED_DIR $PEM_DIR $PEM_REVOKED_DIR $NEW_CRT_DIR $OVPN_CNF_DIR $OVPN_CNF_CLIENTS_DIR $OVPN_CNF_CLIENTS_ZIP_DIR $OSSL_CNF_DIR $CRL_DIR
+	for dir in $CAHOME $KEY_DIR $KEY_REVOKED_DIR $CRT_DIR $CRT_REVOKED_DIR $CSR_DIR $CSR_REVOKED_DIR $PEM_DIR $PEM_REVOKED_DIR $NEW_CRT_DIR $OVPN_CNF_DIR $OVPN_CNF_CLIENTS_DIR $OVPN_CNF_CLIENTS_ZIP_DIR $OSSL_CNF_DIR $CRL_DIR $TA_KEY_DIR $CCD_DIR
 	do
 		if [ ! -d $dir ]
 		then
 			echo -n "  - create $dir : "
 			mkdir -p $dir
+			chmod 750 $dir
 			echo done.
 		fi
 	done
@@ -87,7 +100,7 @@ function check_openssl() {
 	[ ! -f $OSSL_CNF ] && init_openssl_config
 	[ ! -f $OSSL_INDEX ] && echo "INFO : Initialize OpenSSL index file" && touch "$OSSL_INDEX"
 	[ ! -f $OSSL_SERIAL ] && echo "INFO : Initialize OpenSSL serial file" && echo -n 01 > $OSSL_SERIAL
-	[ ! -f $OSSL_DH1024 ] && echo "INFO : Generate OpenSSL dh1024.pem file" && openssl dhparam -out $OSSL_DH1024 1024
+	[ ! -f $DH1024 ] && echo "INFO : Generate OpenSSL dh1024.pem file" && openssl dhparam -out $DH1024 1024
 	return 0
 }
 
@@ -107,7 +120,7 @@ action=$1
 name=$2
 
 function usage() {
-        echo "Usage: $0 {create|recreate|renew|revoke|sign|update-crl|makeconf|makezipconf} {CERTIFICATE_NAME}"
+        echo "Usage: $0 {create|recreate|view|renew|revoke|sign|update-crl|makeconf|makezipconf} {CERTIFICATE_NAME}"
 	echo
 	echo "To initialize your CA, run $0 initialize [your.server.fqdn]"
 }
@@ -138,6 +151,11 @@ case $action in
 
 		echo "Generate key file : "
 		openssl genrsa -out $KEY_DIR/$name.key 2048
+		echo done.
+		echo
+
+		echo "Fix key file access right : "
+		chmod 0600 $KEY_DIR/$name.key
 		echo done.
 		echo
 
@@ -239,48 +257,88 @@ case $action in
 		echo done.
 	;;
 	makeconf)
-		ovpn=$OVPN_CNF_CLIENTS_DIR/$name.ovpn
-		echo "Make OpenVPN client config file : $ovpn"
-		cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/$name/g" > $ovpn
+		ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.ovpn
+		echo "Make OpenVPN client config file :"
+		echo "  $ovpn"
+		cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/${name}/g" > $ovpn
+
+		if [ $( grep -c '%%CERT%%' $ovpn ) -gt 0 ]
+		then
+			perl -pi -e "s(%%CERT%%)($( cat $CRT_DIR/${name}.crt ))" $ovpn
+		fi
+
+		if [ $( grep -c '%%KEY%%' $ovpn ) -gt 0 ]
+		then
+			perl -pi -e "s(%%KEY%%)($( cat $KEY_DIR/${name}.key ))" $ovpn
+		fi
+
+		if [ $( grep -c '%%CACRT%%' $ovpn ) -gt 0 ]
+		then
+			perl -pi -e "s(%%CACRT%%)($( cat $CACRT ))" $ovpn
+		fi
+
+		if [ $( grep -c '%%TA_KEY%%' $ovpn ) -gt 0 ]
+		then
+			perl -pi -e "s(%%TA_KEY%%)($( cat $TA_KEY ))" $ovpn
+		fi
 		echo done.
 	;;
 	makezipconf)
-		zip=$OVPN_CNF_CLIENTS_ZIP_DIR/$name.zip
-		echo "Make OpenVPN client zip config file : $zip"
-		[ ! -f $OVPN_CNF_CLIENTS_DIR/$name.ovpn ] && $0 makeconf $name
-		# Add ta.key if present
-		[ -f $KEY_DIR/ta.key ] && TAKEY=ta.key || TAKEY=""
-		zip -r $zip -j $CRT_DIR/$name.crt $KEY_DIR/$name.key $KEY_DIR/$TAKEY $OVPN_CNF_CLIENTS_DIR/$name.ovpn $CACRT $OVPN_CLIENT_INSTALLER
-		echo done.
+		ADD_IN_ZIP="$OVPN_CLIENT_INSTALLER"
+		ovpn=$OVPN_CNF_CLIENTS_DIR/$name.ovpn
+		[ ! -f $ovpn ] && $0 makeconf $name
+		if [ $( grep -c "cert ${name}.crt" $ovpn ) -gt 0 ]
+		then
+			ADD_IN_ZIP="$ADD_IN_ZIP $CRT_DIR/${name}.crt"
+		fi
+
+		if [ $( grep -c "key ${name}.key" $ovpn ) -gt 0 ]
+		then
+			ADD_IN_ZIP="$ADD_IN_ZIP $KEY_DIR/${name}.key"
+		fi
+
+		if [ $( grep -c "ca $( basename $CACRT )" $ovpn ) -gt 0 ]
+		then
+			ADD_IN_ZIP="$ADD_IN_ZIP $CACRT"
+		fi
+
+		if [ -f $TA_KEY -a $( grep -c "tls-auth $( basename $TA_KEY )" $ovpn ) -gt 0 ]
+		then
+			ADD_IN_ZIP="$ADD_IN_ZIP $TA_KEY"
+		fi
+
+		if [ -n "$ADD_IN_ZIP" ]
+		then
+			zip=$OVPN_CNF_CLIENTS_ZIP_DIR/${name}.zip
+			echo "Make OpenVPN client zip config file : $zip"
+			[ -f $zip ] && echo  -n "Remove old OpenVPN client config zip file : " && rm -f $zip && echo done. || echo error.
+			zip -r $zip -j $ADD_IN_ZIP $ovpn
+			echo done.
+		else
+			echo "No additional file detected. Don't generate zip file, just use OpenVPN client config file : $ovpn"
+		fi
 	;;
 	initialize)
 		echo "Initialize CA with servername $name :"
-		[ ! -d "$OVPN_EASYRSA_20_DIR" ] && echo "ERROR : OpenVPN Easy RSA 2.0 directory not found ($OVPN_EASYRSA_20_DIR). Check your configuration." && exit 1
-		EEKEY_DIR=$KEY_DIR
-		cd "$OVPN_EASYRSA_20_DIR"
 
-		echo "Check OpenSSL configuration file : "
-		if [ ! -f openssl.cnf ]
+		if [ -e "$CAHOME" -o -e "$CAKEY" -o -e "$CACRT" ]
 		then
-			echo -n "Check OpenSSL version : "
-			OSSL_VER=$( openssl version|cut -d' ' -f2 )
-			if [ -z "$OSSL_VER" ]
-			then
-				echo "Unable to detect OpenSSL version. Please enter OpenSSL version : "
-				read OSSL_VER
-			else
-				echo "$OSSL_VER"
-			fi
-
-			OSSL_C_FILE="openssl-$OSSL_VER.cnf"
-			if [ -f "$OSSL_C_FILE" ]
-			then
-				cp "$OSSL_C_FILE" openssl.cnf
-			else
-				echo "OpenSSL configuration file not found ($OSSL_C_FILE). Please put an OpenSSL configuration file adapted to your OpenSSL version ($OSSL_VER) in $OVPN_EASYRSA_20_DIR/openssl.cnf"
-				exit 1
-			fi
+			echo "ERROR : Installation already initialized."
+			echo
+			echo "  If you want to reset your installation, please remove manually"
+			echo "  configuration directory :"
+			echo "    $CAHOME"
+			exit 1
 		fi
+
+		echo "Build Easy RSA temporary directory : "
+		EASYRSA_DIR=$( mktemp -d -u )
+		make-cadir $EASYRSA_DIR
+		[ ! -d "$EASYRSA_DIR" -o ! -e "$EASYRSA_DIR/build-ca" ] && echo "ERROR : problem occured creating Easy RSA directory." && exit 1
+		echo done.
+
+		EESYVPN_KEY_DIR=$KEY_DIR
+		cd "$EASYRSA_DIR"
 
 		echo "Initialize SSL variables :"
 
@@ -290,40 +348,34 @@ case $action in
 		export KEY_CITY="$OSSL_VAR_L"
 		export KEY_ORG="$OSSL_VAR_O"
 		export KEY_EMAIL="$OSSL_VAR_EMAIL"
-		export KEY_CN="$name"
+		#export KEY_CN="$name"
 		export KEY_NAME="$name"
 		export KEY_OU="$OSSL_VAR_OU"
 
-		echo "Clean previous generated CA and build a new one : "
-		./clean-all
 		./build-ca
 
-		KEY_DIR=$EEKEY_DIR
+		KEY_DIR=$EESYVPN_KEY_DIR
 		echo "Structural directories of CA : "
 		check_directories
 		echo done.
 		
 		echo "Copy generated files in CA directory :"
 		echo -n "  - Key ($CAKEY) : "
-		cp keys/ca.key $CAKEY
+		mv keys/ca.key $CAKEY
 		echo done.
 
 		echo -n "  - Certificate ($CACRT) : "
-		cp keys/ca.crt $CACRT
+		mv keys/ca.crt $CACRT
 		echo done.
 
-		echo -n "  - Index ($OSSL_INDEX) : "
-		cp keys/index.txt $OSSL_INDEX
-		echo done.
-
-		echo -n "  - Serial ($OSSL_SERIAL) : "
-		cp keys/serial $OSSL_SERIAL
+		echo "Clean Easy RSA temporary directory :"
+		rm -fr "$EASYRSA_DIR"
 		echo done.
 
 		if [ ! -f "$OVPN_CNF_CLIENTS_TPL" ]
 		then
 			echo -n "Create client template configuration : "
-			cp /usr/share/doc/eesyvpn/example/client-cnf.tpl $OVPN_CNF_CLIENTS_TPL
+			cp /usr/share/doc/eesyvpn/example/client.ovpn.tpl $OVPN_CNF_CLIENTS_TPL
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
 			echo done.
 		fi
@@ -331,21 +383,42 @@ case $action in
 		$0 update-crl
 
 		echo "Clean previous generated TA key and build an new one : "
-		[ -f $TA_KEY_DIR/ta.key ] && rm -f $TA_KEY_DIR/ta.key
-		openvpn --genkey --secret $TA_KEY_DIR/ta.key
+		[ -f $TA_KEY ] && rm -f $TA_KEY
+		openvpn --genkey --secret $TA_KEY
 		echo done
+
+		echo -n "Create VPN server key and certificate :"
+		$0 create "$name" --server --without-config
+		echo done.
+		SRVKEY=$KEY_DIR/${name}.key
+		SRVCRT=$CRT_DIR/${name}.crt
+
+		echo "Fixed configuration files access rights :"
+		echo -n "  - Key files : "
+		chmod 0600 $CAKEY $TA_KEY $SRVKEY 
+		echo done.
+
+		echo -n "  - Certificates files : "
+		chmod 0644 $CACRT $SRVCRT
+		echo done.
 
 		if [ ! -f "$OVPN_SERVER_CNF" ]
 		then
 			echo -n "Create server configuration : "
-			cp /usr/share/doc/eesyvpn/example/eesyvpn.conf $OVPN_SERVER_CNF
-			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_SERVER_CNF
-			sed -i "s/%%VPN_NAME%%/$VPN_NAME/g" $OVPN_SERVER_CNF
-			sed -i "s/%%VPN_LOG_NAME%%/$VPN_LOG_NAME/g" $OVPN_SERVER_CNF
+			cp /usr/share/doc/eesyvpn/example/openvpn.conf $OVPN_SERVER_CNF
+			sed -i "s|%%HOSTNAME%%|$name|g" $OVPN_SERVER_CNF
+			sed -i "s|%%VPN_NAME%%|$VPN_NAME|g" $OVPN_SERVER_CNF
+			sed -i "s|%%SRVKEY%%|$SRVKEY|g" $OVPN_SERVER_CNF
+			sed -i "s|%%SRVCRT%%|$SRVCRT|g" $OVPN_SERVER_CNF
+			sed -i "s|%%CACRT%%|$CACRT|g" $OVPN_SERVER_CNF
+			sed -i "s|%%DH1024%%|$DH1024|g" $OVPN_SERVER_CNF
+			sed -i "s|%%TA_KEY%%|$TA_KEY|g" $OVPN_SERVER_CNF
+			sed -i "s|%%CRLPEM%%|$CRLPEM|g" $OVPN_SERVER_CNF
+			sed -i "s|%%CCD_DIR%%|$CCD_DIR|g" $OVPN_SERVER_CNF
+			sed -i "s|%%VPN_LOG_FILE%%|$VPN_LOG_FILE|g" $OVPN_SERVER_CNF
+			sed -i "s|%%VPN_LOG_STATUS_FILE%%|$VPN_LOG_STATUS_FILE|g" $OVPN_SERVER_CNF
 			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
-
-			$0 create "$name" --server --without-config
 
 			/etc/init.d/openvpn start $( basename $OVPN_SERVER_CNF|sed 's/\.conf$//' )
 		fi

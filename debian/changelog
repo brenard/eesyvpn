@@ -1,3 +1,16 @@
+eesyvpn (1.1-1) unstable; urgency=medium
+
+  * Fix server configuration provide by package :
+    + Server configuration is now configured from template file
+  * Manage embedded keys and certificates files for client configuration
+  * Use easy-rsa Debian package and make-cadir tool to generate CA
+  * Rework on file organization :
+    + Move CA home directory in /etc/eesyvpn
+    + Move some files to more logical locations
+  * Fix access rigths on CA files
+
+ -- Benjamin Renard <brenard@easter-eggs.com>  Tue, 23 May 2017 17:13:20 +0200
+
 eesyvpn (1.0-2) unstable; urgency=low
 
   * Add variable to manage VPN name and home and log directory and config file
