@@ -74,10 +74,13 @@ function check_directories() {
 		then
 			echo -n "  - create $dir : "
 			mkdir -p $dir
-			chmod 750 $dir
+			chmod 755 $dir
 			echo done.
 		fi
 	done
+
+	# Fix structural directories rights
+	chmod 750 $KEY_DIR $CSR_DIR $TA_KEY_DIR $OVPN_CNF_CLIENTS_DIR $PEM_DIR $OSSL_CNF_DIR
 	return 0
 }
 
