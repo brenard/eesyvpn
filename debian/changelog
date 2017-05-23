@@ -1,3 +1,10 @@
+eesyvpn (1.1-2) unstable; urgency=medium
+
+  * Fix structural directories rights
+  * Fix dh1024 file location
+
+ -- Benjamin Renard <brenard@easter-eggs.com>  Tue, 23 May 2017 18:12:45 +0200
+
 eesyvpn (1.1-1) unstable; urgency=medium
 
   * Fix server configuration provide by package :
