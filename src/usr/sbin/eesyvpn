@@ -387,6 +387,7 @@ case $action in
 		echo done.
 
 		cd $CAHOME
+
 		echo "Clean Easy RSA temporary directory :"
 		rm -fr "$EASYRSA_DIR"
 		echo done.
@@ -398,8 +399,6 @@ case $action in
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
 			echo done.
 		fi
-
-		$0 update-crl
 
 		echo "Clean previous generated TA key and build an new one : "
 		[ -f $TA_KEY ] && rm -f $TA_KEY
