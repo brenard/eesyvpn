@@ -60,7 +60,7 @@ OVPN_SERVER_LINK=/etc/openvpn/${VPN_NAME}.conf
 function check_ca_structure() {
 	# Check structure
 	[ ! -d $CAHOME ] && echo "ERROR : Certification Authority directory not found ($CAHOME). Check your configuration" && exit 1
-	
+
 	[ ! -f $CACRT ] && echo "ERROR : Certification Authority certificate not found ($CACRT). Check your configuration" && exit 1
 	[ ! -f $CAKEY ] && echo "ERROR : Certification Authority key not found ($CAKEY). Check your configuration" && exit 1
 	return 0
@@ -182,7 +182,7 @@ case $action in
 		openssl req -new -key $KEY_DIR/$name.key -out $CSR_DIR/$name.csr -config $OSSL_CNF -subj "$SUBJ"
 		echo done.
 		echo
-		
+
 		$0 sign $name "$3"
 
 		if [ ! -f "$CRT_DIR/$name.crt" ]
@@ -386,6 +386,7 @@ case $action in
 		mv keys/ca.crt $CACRT
 		echo done.
 
+		cd $CAHOME
 		echo "Clean Easy RSA temporary directory :"
 		rm -fr "$EASYRSA_DIR"
 		echo done.
