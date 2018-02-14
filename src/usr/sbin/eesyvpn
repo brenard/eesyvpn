@@ -334,6 +334,18 @@ case $action in
 			exit 1
 		fi
 
+		for dir in $CAHOME $OSSL_CNF_DIR
+        	do
+                	if [ ! -d $dir ]
+                	then
+                        	echo -n "  - create $dir : "
+                        	mkdir -p $dir
+                        	chmod 755 $dir
+                        	echo done.
+                	fi
+        	done
+
+		[ ! -f $OSSL_CNF ] && init_openssl_config
 		echo "Build Easy RSA temporary directory : "
 		EASYRSA_DIR=$( mktemp -d -u )
 		make-cadir $EASYRSA_DIR
