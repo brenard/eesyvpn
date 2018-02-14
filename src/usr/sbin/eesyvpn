@@ -369,13 +369,14 @@ case $action in
 		export KEY_NAME="$name"
 		export KEY_OU="$OSSL_VAR_OU"
 
+		mkdir $KEY_DIR
 		./build-ca
 
 		KEY_DIR=$EESYVPN_KEY_DIR
 		echo "Structural directories of CA : "
 		check_directories
 		echo done.
-		
+
 		echo "Copy generated files in CA directory :"
 		echo -n "  - Key ($CAKEY) : "
 		mv keys/ca.key $CAKEY
