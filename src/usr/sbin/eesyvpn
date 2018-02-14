@@ -346,17 +346,19 @@ case $action in
         	done
 
 		[ ! -f $OSSL_CNF ] && init_openssl_config
+
 		echo "Build Easy RSA temporary directory : "
 		EASYRSA_DIR=$( mktemp -d -u )
 		make-cadir $EASYRSA_DIR
 		[ ! -d "$EASYRSA_DIR" -o ! -e "$EASYRSA_DIR/build-ca" ] && echo "ERROR : problem occured creating Easy RSA directory." && exit 1
 		echo done.
 
+
 		EESYVPN_KEY_DIR=$KEY_DIR
 		cd "$EASYRSA_DIR"
 
 		echo "Initialize SSL variables :"
-
+		cp $OSSL_CNF $EASYRSA_DIR/openssl.cnf
 		source ./vars
 		export KEY_COUNTRY="$OSSL_VAR_C"
 		export KEY_PROVINCE="$OSSL_VAR_ST"
