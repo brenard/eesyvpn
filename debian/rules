@@ -4,7 +4,7 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-build: 
+build:
 	echo "Nothing here"
 
 clean:
@@ -24,7 +24,7 @@ install: build
 	cp -fr $(CURDIR)/src/usr/sbin/eesyvpn $(CURDIR)/debian/eesyvpn/usr/sbin/
 	cp -fr $(CURDIR)/src/usr/share/doc/eesyvpn/example/* $(CURDIR)/debian/eesyvpn/usr/share/doc/eesyvpn/example/
 	find $(CURDIR)/debian/eesyvpn/usr/share/doc/eesyvpn/example/ -name '*~' -exec rm -f {} \;
-	
+	cp -fr $(CURDIR)/src/etc/systemd/system/* $(CURDIR)/debian/eesyvpn/etc/systemd/system/
 
 # Build architecture-independent files here.
 binary-indep: build install

@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenVPN secure IP tunnel daemon on %I
+Requires=network-online.service
+After=network-online.service
+
+[Service]
+PrivateTmp=true
+Type=forking
+PIDFile=/var/run/openvpn/%i.pid
+ExecStart=/usr/sbin/openvpn --daemon --writepid /var/run/openvpn/%i.pid --cd /etc/openvpn --config %i.conf
+
+[Install]
+WantedBy=multi-user.target

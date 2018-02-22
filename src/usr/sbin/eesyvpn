@@ -438,7 +438,8 @@ case $action in
 			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
 
-			/etc/init.d/openvpn start $( basename $OVPN_SERVER_CNF|sed 's/\.conf$//' )
+			systemctl start openvpn@${name}.service
+			systemctl status openvpn@${name}.service
 		fi
 	;;
 	list)
