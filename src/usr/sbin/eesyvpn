@@ -169,8 +169,16 @@ case $action in
 
 		if [ "$3" != '--without-config' -a "$4" != '--without-config' -a "$3" != '--server' ]
 		then
-			$0 makeconf $name
-			$0 makezipconf $name
+			if [ "$3" = 'linux' ]
+			then
+				OS="linux"
+			else
+				echo "We use Windows formated openvpn conf file by default"
+				echo "If you want a linux version, use $0 create linux"
+				OS="windows"
+			fi
+			$0 makeconf $name $OS
+			$0 makezipconf $name $OS
 		fi
 	;;
 	makecert)
@@ -187,7 +195,7 @@ case $action in
 		echo
 
 		$0 sign $name "$3"
-
+		
 		if [ ! -f "$CRT_DIR/$name.crt" ]
 		then
 			echo "ERROR : Certificate file not found ($CRT_DIR/$name.crt)."
@@ -264,54 +272,39 @@ case $action in
 	;;
 	makeconf)
 		ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.ovpn
-		echo "Make OpenVPN client config file :"
-		echo "  $ovpn"
-		cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/${name}/g" > $ovpn
+		OS="$3"
+		echo "Make OpenVPN client config file"
+		if [ "$OS" = 'linux' ]; then
+			cat $OVPN_CNF_CLIENTS_TPL|sed "s/%%CN%%/${name}/g" > $ovpn
+		else
+			cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/${name}/g" > $ovpn
+		fi
 
 		if [ $( grep -c '%%CERT%%' $ovpn ) -gt 0 ]
 		then
-			perl -pi -e "s(%%CERT%%)($( cat $CRT_DIR/${name}.crt ))" $ovpn
+			perl -pi -e "s(%%CERT%%)($( echo ${name}.crt ))" $ovpn
 		fi
-
 		if [ $( grep -c '%%KEY%%' $ovpn ) -gt 0 ]
 		then
-			perl -pi -e "s(%%KEY%%)($( cat $KEY_DIR/${name}.key ))" $ovpn
+			perl -pi -e "s(%%KEY%%)($( echo ${name}.key ))" $ovpn
 		fi
 
-		if [ $( grep -c '%%CACRT%%' $ovpn ) -gt 0 ]
-		then
-			perl -pi -e "s(%%CACRT%%)($( cat $CACRT ))" $ovpn
+		if [ "$OS" = 'linux' ]; then
+			mv $OVPN_CNF_CLIENTS_DIR/${name}.ovpn  $OVPN_CNF_CLIENTS_DIR/${name}.conf
+			ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.conf
 		fi
-
-		if [ $( grep -c '%%TA_KEY%%' $ovpn ) -gt 0 ]
-		then
-			perl -pi -e "s(%%TA_KEY%%)($( cat $TA_KEY ))" $ovpn
-		fi
+		echo "OpenVPN client config file created in:"
+		echo "  $ovpn"
 		echo done.
 	;;
 	makezipconf)
-		ADD_IN_ZIP="$OVPN_CLIENT_INSTALLER"
-		ovpn=$OVPN_CNF_CLIENTS_DIR/$name.ovpn
+		for conf in `find $OVPN_CNF_CLIENTS_DIR \( -iname ${name}.conf -o -iname ${name}.ovpn \)`
+		do
+			ovpn=$conf
+		done
 		[ ! -f $ovpn ] && $0 makeconf $name
-		if [ $( grep -c "cert ${name}.crt" $ovpn ) -gt 0 ]
-		then
-			ADD_IN_ZIP="$ADD_IN_ZIP $CRT_DIR/${name}.crt"
-		fi
 
-		if [ $( grep -c "key ${name}.key" $ovpn ) -gt 0 ]
-		then
-			ADD_IN_ZIP="$ADD_IN_ZIP $KEY_DIR/${name}.key"
-		fi
-
-		if [ $( grep -c "ca $( basename $CACRT )" $ovpn ) -gt 0 ]
-		then
-			ADD_IN_ZIP="$ADD_IN_ZIP $CACRT"
-		fi
-
-		if [ -f $TA_KEY -a $( grep -c "tls-auth $( basename $TA_KEY )" $ovpn ) -gt 0 ]
-		then
-			ADD_IN_ZIP="$ADD_IN_ZIP $TA_KEY"
-		fi
+		ADD_IN_ZIP="$CRT_DIR/${name}.crt $KEY_DIR/${name}.key	$CACRT $TA_KEY"
 
 		if [ -n "$ADD_IN_ZIP" ]
 		then
@@ -397,9 +390,10 @@ case $action in
 
 		if [ ! -f "$OVPN_CNF_CLIENTS_TPL" ]
 		then
-			echo -n "Create client template configuration : "
+			echo "Create client template configuration : "
 			cp /usr/share/doc/eesyvpn/example/client.ovpn.tpl $OVPN_CNF_CLIENTS_TPL
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
+			echo -e "\t- Note: If you want to add more than one remote address edit $OVPN_CNF_CLIENTS_TPL manually"
 			echo done.
 		fi
 

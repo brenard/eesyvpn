@@ -12,24 +12,17 @@ resolv-retry infinite
 
 remote %%HOSTNAME%% 1190
 
-<key>
-%%KEY%%
-</key>
-<cert>
-%%CERT%%
-</cert>
-<ca>
-%%CACRT%%
-</ca>
+key %%KEY%%
+cert %%CERT%%
+ca ca.crt
+
 remote-cert-tls server
 auth-nocache
 
 cipher AES-256-CBC
 
 key-direction 1
-<tls-auth>
-%%TA_KEY%%
-</tls-auth>
+tls-auth ta.key
 
 comp-lzo
 verb 3
