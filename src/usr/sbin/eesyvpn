@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VPN_NAME="eesyvpn"
+VPN_PORT="1190"
 
 # Certification Authority
 CAHOME=/etc/eesyvpn/$VPN_NAME
@@ -426,6 +427,7 @@ case $action in
 			cp /usr/share/doc/eesyvpn/example/openvpn.conf $OVPN_SERVER_CNF
 			sed -i "s|%%HOSTNAME%%|$name|g" $OVPN_SERVER_CNF
 			sed -i "s|%%VPN_NAME%%|$VPN_NAME|g" $OVPN_SERVER_CNF
+			sed -i "s|%%VPN_PORT%%|$VPN_PORT|g" $OVPN_SERVER_CNF
 			sed -i "s|%%SRVKEY%%|$SRVKEY|g" $OVPN_SERVER_CNF
 			sed -i "s|%%SRVCRT%%|$SRVCRT|g" $OVPN_SERVER_CNF
 			sed -i "s|%%CACRT%%|$CACRT|g" $OVPN_SERVER_CNF
