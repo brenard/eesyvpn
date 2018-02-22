@@ -10,7 +10,7 @@ persist-key
 persist-tun
 resolv-retry infinite
 
-remote %%HOSTNAME%% 1190
+remote %%HOSTNAME%% %%VPN_PORT%%
 
 key %%KEY%%
 cert %%CERT%%

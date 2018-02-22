@@ -396,6 +396,7 @@ case $action in
 			echo "Create client template configuration : "
 			cp /usr/share/doc/eesyvpn/example/client.ovpn.tpl $OVPN_CNF_CLIENTS_TPL
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
+			sed -i "s/%%VPN_PORT%%/$name/g" $OVPN_CNF_CLIENTS_TPL
 			echo -e "\t- Note: If you want to add more than one remote address edit $OVPN_CNF_CLIENTS_TPL manually"
 			echo done.
 		fi
