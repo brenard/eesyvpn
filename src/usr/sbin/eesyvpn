@@ -156,7 +156,7 @@ case $action in
 		fi
 
 		echo "Generate key file : "
-		openssl genrsa -out $KEY_DIR/$name.key 2048
+		openssl genrsa -out $KEY_DIR/$name.key 4096
 		echo done.
 		echo
 
