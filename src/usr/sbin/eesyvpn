@@ -126,7 +126,10 @@ action=$1
 name=$2
 
 function usage() {
-        echo "Usage: $0 {create|recreate|view|renew|revoke|sign|update-crl|makeconf|makezipconf} {CERTIFICATE_NAME}"
+	echo "Usage: $0 {create|recreate|list|view|renew|revoke|makeconf|makezipconf|makecert|namebyid} {CERTIFICATE_NAME}"
+	echo
+	echo -e "\tcreate \t: Create user certificate. (default with dos format. Specify an extra arg 'linux' to use linux format & conffile)"
+	echo -e "\tlist \t: List all certificates"
 	echo
 	echo "To initialize your CA, run $0 initialize [your.server.fqdn]"
 }
@@ -195,7 +198,7 @@ case $action in
 		echo
 
 		$0 sign $name "$3"
-		
+
 		if [ ! -f "$CRT_DIR/$name.crt" ]
 		then
 			echo "ERROR : Certificate file not found ($CRT_DIR/$name.crt)."
