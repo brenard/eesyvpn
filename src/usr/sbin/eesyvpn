@@ -317,7 +317,7 @@ case $action in
 		then
 			zip=$OVPN_CNF_CLIENTS_ZIP_DIR/${name}.zip
 			echo "Make OpenVPN client zip config file : $zip"
-			[ -f $zip ] && echo  -n "Remove old OpenVPN client config zip file : " && rm -f $zip && echo done. || echo error.
+			[ -f $zip ] && echo  -n "Remove old OpenVPN client config zip file : " && rm -f $zip && echo done.
 			zip -r $zip -j $ADD_IN_ZIP $ovpn
 			echo done.
 		else
