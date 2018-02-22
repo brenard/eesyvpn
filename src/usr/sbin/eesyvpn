@@ -272,6 +272,15 @@ case $action in
 		echo "Update CRL ($CRLPEM) : "
 		openssl ca -gencrl -config $OSSL_CNF -crldays 31 -out $CRLPEM
 		echo done.
+
+    echo "Verify crl checking is enabled in your conf: $OVPN_SERVER_CNF"
+    if [ -f "$OVPN_SERVER_CNF" ]
+    then
+            sed -i "s/#crl-verify/crl-verify/g" $OVPN_SERVER_CNF
+            echo done.
+						echo "Restarting openvpn.."
+						systemctl restart openvpn@${VPN_NAME}.service
+    fi
 	;;
 	makeconf)
 		ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.ovpn
@@ -440,8 +449,8 @@ case $action in
 			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
 
-			systemctl start openvpn@${name}.service
-			systemctl status openvpn@${name}.service
+			systemctl start openvpn@${VPN_NAME}.service
+			systemctl status openvpn@${VPN_NAME}.service
 		fi
 	;;
 	list)
