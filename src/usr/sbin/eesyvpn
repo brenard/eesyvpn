@@ -42,6 +42,7 @@ OSSL_VAR_O="Easter-eggs"
 OSSL_VAR_OU="$OSSL_VAR_O"
 OSSL_VAR_EMAIL="postmaster@easter-eggs.com"
 OSSL_VAR_CAHOME="$CAHOME"
+OSSL_VAR_CANAME="$VPN_NAME"
 
 [ ! -n "$OSSL_CERT_TYPE" ] && OSSL_CERT_TYPE="client, email"
 
@@ -95,6 +96,7 @@ function init_openssl_config() {
 	sed -i "s/%%OU%%/$OSSL_VAR_OU/g" $OSSL_CNF
 	sed -i "s/%%EMAIL%%/$OSSL_VAR_EMAIL/g" $OSSL_CNF
 	sed -i "s@%%CAHOME%%@$OSSL_VAR_CAHOME@g" $OSSL_CNF
+	sed -i "s@%%CANAME%%@$OSSL_VAR_CANAME@g" $OSSL_CNF
 	echo done.
 	return 0
 }
