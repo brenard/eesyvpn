@@ -21,6 +21,8 @@ remote %%HOSTNAME%% %%VPN_PORT%%
 <ca>
 %%CACRT%%
 </ca>
+remote-cert-tls server
+auth-nocache
 
 cipher AES-256-CBC
 
