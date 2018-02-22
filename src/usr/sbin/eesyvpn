@@ -409,7 +409,7 @@ case $action in
 
 		echo "Fixed configuration files access rights :"
 		echo -n "  - Key files : "
-		chmod 0600 $CAKEY $TA_KEY $SRVKEY 
+		chmod 0600 $CAKEY $TA_KEY $SRVKEY
 		echo done.
 
 		echo -n "  - Certificates files : "
