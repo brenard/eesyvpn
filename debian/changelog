@@ -1,3 +1,14 @@
+eesyvpn (1.2-1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Remove Os specific vars + unsed substitution in client config
+  * Hardening & Optimising vpn security
+  * Add variable to manage VPN name displayed to the user
+  * Add availability to set the strengh of Diffie-Hellman parameters via eesyvpn.conf
+  * Fix defined openvpn port number in user configuration
+
+ -- Felix Defrance <felix@d2france.fr>  Wed, 28 Mar 2018 17:18:14 +0200
+
 eesyvpn (1.2) unstable; urgency=medium
 
   * Non-maintainer upload.
