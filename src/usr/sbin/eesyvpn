@@ -298,9 +298,9 @@ case $action in
 		OS="$3"
 		echo "Make OpenVPN client config file"
 		if [ "$OS" = 'linux' ]; then
-			cat $OVPN_CNF_CLIENTS_TPL|sed "s/%%CN%%/${name}/g" > $ovpn
+			cat $OVPN_CNF_CLIENTS_TPL > $ovpn
 		else
-			cat $OVPN_CNF_CLIENTS_TPL|unix2dos|sed "s/%%CN%%/${name}/g" > $ovpn
+			cat $OVPN_CNF_CLIENTS_TPL|unix2dos > $ovpn
 		fi
 
 		if [ $( grep -c '%%CERT%%' $ovpn ) -gt 0 ]
@@ -315,6 +315,9 @@ case $action in
 		if [ "$OS" = 'linux' ]; then
 			mv $OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.ovpn  $OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.conf
 			ovpn=$OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.conf
+			sed -i "/^# Required on Microsoft Windows 7/d" $ovpn
+			sed -i "/^route-method exe/d" $ovpn
+			sed -i "/^route-delay 2/d" $ovpn
 		fi
 		echo "OpenVPN client config file created in:"
 		echo "  $ovpn"
