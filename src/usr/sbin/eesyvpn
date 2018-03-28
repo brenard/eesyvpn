@@ -2,6 +2,8 @@
 
 VPN_NAME="eesyvpn"
 VPN_PORT="1190"
+# Set strengh of the Diffie-Hellman parameters
+DH_STRENGH="2048"
 
 # Certification Authority
 CAHOME=/etc/eesyvpn/$VPN_NAME
@@ -21,7 +23,7 @@ NEW_CRT_DIR=$CAHOME/misc/ca.db.certs
 TA_KEY_DIR=$CAHOME/private
 TA_KEY=$TA_KEY_DIR/ta.key
 CCD_DIR=$CAHOME/ccd
-DH1024=$KEY_DIR/dh1024.pem
+DHFILE=$KEY_DIR/dh${DH_STRENGH}.pem
 
 # Log configuration
 VPN_LOG_DIR="/var/log"
@@ -101,19 +103,24 @@ function init_openssl_config() {
 	return 0
 }
 
+function set_dhparam_strengh() {
+	echo "INFO : Generate OpenSSL dh$DH_STRENGH.pem file"
+	openssl dhparam -out $DHFILE $DH_STRENGH
+}
+
 function check_openssl() {
 	# OpenSSL
 	[ ! -f $OSSL_CNF ] && init_openssl_config
 	[ ! -f $OSSL_INDEX ] && echo "INFO : Initialize OpenSSL index file" && touch "$OSSL_INDEX"
 	[ ! -f $OSSL_SERIAL ] && echo "INFO : Initialize OpenSSL serial file" && echo -n 01 > $OSSL_SERIAL
-	[ ! -f $DH1024 ] && echo "INFO : Generate OpenSSL dh1024.pem file" && openssl dhparam -out $DH1024 1024
+	[ ! -f $DHFILE ] && echo "ERROR: Diffie Hellman parameter is missing. Check your configuration" && exit 1
 	return 0
 }
 
 function check_openvpn() {
 	# OpenVPN
 	[ ! -d $OVPN_CNF_DIR ] && echo "INFO : Create OpenVPN configuration directory" && mkdir $OVPN_CNF_DIR
-	[ ! -f $OVPN_CNF_CLIENTS_TPL ] && echo "ERROR : OpenVPN configuration template file nod found ($OVPN_CNF_CLIENTS_TPL). Check your configuration" && exit 1
+	[ ! -f $OVPN_CNF_CLIENTS_TPL ] && echo "ERROR : OpenVPN configuration template file not found ($OVPN_CNF_CLIENTS_TPL). Check your configuration" && exit 1
 	return 0
 }
 
@@ -415,6 +422,8 @@ case $action in
 		openvpn --genkey --secret $TA_KEY
 		echo done
 
+		[ ! -f $DHFILE ] && set_dhparam_strengh
+
 		echo -n "Create VPN server key and certificate :"
 		$0 create "$name" --server --without-config
 		echo done.
@@ -440,7 +449,7 @@ case $action in
 			sed -i "s|%%SRVKEY%%|$SRVKEY|g" $OVPN_SERVER_CNF
 			sed -i "s|%%SRVCRT%%|$SRVCRT|g" $OVPN_SERVER_CNF
 			sed -i "s|%%CACRT%%|$CACRT|g" $OVPN_SERVER_CNF
-			sed -i "s|%%DH1024%%|$DH1024|g" $OVPN_SERVER_CNF
+			sed -i "s|%%DHFILE%%|$DHFILE|g" $OVPN_SERVER_CNF
 			sed -i "s|%%TA_KEY%%|$TA_KEY|g" $OVPN_SERVER_CNF
 			sed -i "s|%%CRLPEM%%|$CRLPEM|g" $OVPN_SERVER_CNF
 			sed -i "s|%%CCD_DIR%%|$CCD_DIR|g" $OVPN_SERVER_CNF
