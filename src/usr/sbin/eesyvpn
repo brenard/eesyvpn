@@ -137,7 +137,7 @@ action=$1
 name=$2
 
 function usage() {
-	echo "Usage: $0 {create|recreate|list|view|renew|revoke|makeconf|makezipconf|makecert|namebyid} {CERTIFICATE_NAME}"
+	echo "Usage: $0 {create|recreate|list|view|renew|revoke|makeconf|makezipconf|makecert|namebyid} {CERTIFICATE_NAME} [environnement: (windows (default)|linux)]"
 	echo
 	echo -e "\tcreate \t: Create user certificate. (default with dos format. Specify an extra arg 'linux' to use linux format & conffile)"
 	echo -e "\tlist \t: List all certificates"
