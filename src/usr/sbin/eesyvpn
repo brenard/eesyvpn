@@ -430,7 +430,21 @@ case $action in
 			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
 
-			/etc/init.d/openvpn start $( basename $OVPN_SERVER_CNF|sed 's/\.conf$//' )
+			if [ -d /run/systemd/system ]
+			then
+				service=openvpn@$( basename $OVPN_SERVER_LINK|sed 's/\.conf$//' ).service
+
+				echo "Enable service on boot :"
+				/bin/systemctl enable $service
+				echo done.
+
+				echo "Start service : "
+				/bin/systemctl start $service
+				/bin/systemctl status $service
+			else
+				# OpenVPN is enabled by default on init V debian installation
+				/etc/init.d/openvpn start $( basename $OVPN_SERVER_LINK|sed 's/\.conf$//' )
+			fi
 		fi
 	;;
 	list)
