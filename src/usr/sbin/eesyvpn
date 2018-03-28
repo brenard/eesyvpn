@@ -1,6 +1,10 @@
 #!/bin/bash
 
+# Set the vpn server name
 VPN_NAME="eesyvpn"
+# Set the vpn name displayed to the users
+VPN_CLIENT_NAME="eesyvpn"
+# set the vpn port used
 VPN_PORT="1190"
 # Set strengh of the Diffie-Hellman parameters
 DH_STRENGH="2048"
@@ -52,6 +56,7 @@ OSSL_CERT_SUBJ_FORMAT="/C=$OSSL_VAR_C/ST=$OSSL_VAR_ST/L=$OSSL_VAR_L/O=$OSSL_VAR_
 
 # OpenVPN
 OVPN_CNF_DIR=$CAHOME/openvpn
+OVPN_CNF_CLIENTS_NAME=$VPN_CLIENT_NAME
 OVPN_CNF_CLIENTS_DIR=$OVPN_CNF_DIR/clients
 OVPN_CNF_CLIENTS_ZIP_DIR=$OVPN_CNF_CLIENTS_DIR
 OVPN_CNF_CLIENTS_TPL=$OVPN_CNF_DIR/client.ovpn.tpl
@@ -64,7 +69,6 @@ OVPN_SERVER_LINK=/etc/openvpn/${VPN_NAME}.conf
 function check_ca_structure() {
 	# Check structure
 	[ ! -d $CAHOME ] && echo "ERROR : Certification Authority directory not found ($CAHOME). Check your configuration" && exit 1
-
 	[ ! -f $CACRT ] && echo "ERROR : Certification Authority certificate not found ($CACRT). Check your configuration" && exit 1
 	[ ! -f $CAKEY ] && echo "ERROR : Certification Authority key not found ($CAKEY). Check your configuration" && exit 1
 	return 0
@@ -290,7 +294,7 @@ case $action in
     fi
 	;;
 	makeconf)
-		ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.ovpn
+		ovpn=$OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.ovpn
 		OS="$3"
 		echo "Make OpenVPN client config file"
 		if [ "$OS" = 'linux' ]; then
@@ -309,15 +313,15 @@ case $action in
 		fi
 
 		if [ "$OS" = 'linux' ]; then
-			mv $OVPN_CNF_CLIENTS_DIR/${name}.ovpn  $OVPN_CNF_CLIENTS_DIR/${name}.conf
-			ovpn=$OVPN_CNF_CLIENTS_DIR/${name}.conf
+			mv $OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.ovpn  $OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.conf
+			ovpn=$OVPN_CNF_CLIENTS_DIR/${OVPN_CNF_CLIENTS_NAME}.conf
 		fi
 		echo "OpenVPN client config file created in:"
 		echo "  $ovpn"
 		echo done.
 	;;
 	makezipconf)
-		for conf in `find $OVPN_CNF_CLIENTS_DIR \( -iname ${name}.conf -o -iname ${name}.ovpn \)`
+		for conf in `find $OVPN_CNF_CLIENTS_DIR \( -iname ${OVPN_CNF_CLIENTS_NAME}.conf -o -iname ${OVPN_CNF_CLIENTS_NAME}.ovpn \)`
 		do
 			ovpn=$conf
 		done
@@ -359,7 +363,6 @@ case $action in
                         	echo done.
                 	fi
         	done
-
 		[ ! -f $OSSL_CNF ] && init_openssl_config
 
 		echo "Build Easy RSA temporary directory : "
@@ -367,7 +370,6 @@ case $action in
 		make-cadir $EASYRSA_DIR
 		[ ! -d "$EASYRSA_DIR" -o ! -e "$EASYRSA_DIR/build-ca" ] && echo "ERROR : problem occured creating Easy RSA directory." && exit 1
 		echo done.
-
 
 		EESYVPN_KEY_DIR=$KEY_DIR
 		cd "$EASYRSA_DIR"
