@@ -334,18 +334,29 @@ case $action in
 			exit 1
 		fi
 
+		echo "Check or create structural directories of CA : "
+		check_directories
+		echo done.
+
+		# Check/create openssl configuration
+		check_openssl
+
+		# Store eesyvpn key dir because Easy RSA use the same variable name
+		EESYVPN_KEY_DIR=$KEY_DIR
+
 		echo "Build Easy RSA temporary directory : "
 		EASYRSA_DIR=$( mktemp -d -u )
 		make-cadir $EASYRSA_DIR
 		[ ! -d "$EASYRSA_DIR" -o ! -e "$EASYRSA_DIR/build-ca" ] && echo "ERROR : problem occured creating Easy RSA directory." && exit 1
 		echo done.
 
-		EESYVPN_KEY_DIR=$KEY_DIR
 		cd "$EASYRSA_DIR"
-
 		echo "Initialize SSL variables :"
-
 		source ./vars
+
+		# Run clean-all to auto-create keys dir
+		./clean-all
+
 		export KEY_COUNTRY="$OSSL_VAR_C"
 		export KEY_PROVINCE="$OSSL_VAR_ST"
 		export KEY_CITY="$OSSL_VAR_L"
@@ -357,11 +368,6 @@ case $action in
 
 		./build-ca
 
-		KEY_DIR=$EESYVPN_KEY_DIR
-		echo "Structural directories of CA : "
-		check_directories
-		echo done.
-		
 		echo "Copy generated files in CA directory :"
 		echo -n "  - Key ($CAKEY) : "
 		mv keys/ca.key $CAKEY
@@ -372,6 +378,7 @@ case $action in
 		echo done.
 
 		echo "Clean Easy RSA temporary directory :"
+		cd $CAHOME
 		rm -fr "$EASYRSA_DIR"
 		echo done.
 
@@ -393,7 +400,7 @@ case $action in
 		echo -n "Create VPN server key and certificate :"
 		$0 create "$name" --server --without-config
 		echo done.
-		SRVKEY=$KEY_DIR/${name}.key
+		SRVKEY=$EESYVPN_KEY_DIR/${name}.key
 		SRVCRT=$CRT_DIR/${name}.crt
 
 		echo "Fixed configuration files access rights :"
