@@ -1,3 +1,4 @@
 etc/eesyvpn
 usr/sbin
 usr/share/doc/eesyvpn/example
+etc/systemd/system

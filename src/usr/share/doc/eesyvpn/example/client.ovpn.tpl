@@ -12,26 +12,21 @@ resolv-retry infinite
 
 remote %%HOSTNAME%% %%VPN_PORT%%
 
-<key>
-%%KEY%%
-</key>
-<cert>
-%%CERT%%
-</cert>
-<ca>
-%%CACRT%%
-</ca>
+key %%KEY%%
+cert %%CERT%%
+ca ca.crt
+
 remote-cert-tls server
 auth-nocache
 
+# Hardening
 cipher AES-256-CBC
+auth SHA512
 
 key-direction 1
-<tls-auth>
-%%TA_KEY%%
-</tls-auth>
+tls-auth ta.key
 
-comp-lzo
+compress lz4
 verb 3
 
 # Required on Microsoft Windows 7
