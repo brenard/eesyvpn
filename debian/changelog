@@ -1,3 +1,27 @@
+eesyvpn (1.2-1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Remove Os specific vars + unsed substitution in client config
+  * Hardening & Optimising vpn security
+  * Add variable to manage VPN name displayed to the user
+  * Add availability to set the strengh of Diffie-Hellman parameters via eesyvpn.conf
+  * Fix defined openvpn port number in user configuration
+
+ -- Felix Defrance <felix@d2france.fr>  Wed, 28 Mar 2018 17:18:14 +0200
+
+eesyvpn (1.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Add openvpn systemd unit-file & deployement
+  * Add availability to create linux configuration file
+  * Move onefile conf to zip archive bundled conf
+  * Make cryptographic layers stronger
+  * Add a named CA instead of the default.
+  * Auto-activate CRL checking
+  * Some fixes listed in git repo (https://github.com/FelixDefrance/eesyvpn)
+
+ -- Felix <felix@d2france.fr>  Wed, 21 Feb 2018 15:55:56 +0100
+
 eesyvpn (1.1-2) unstable; urgency=medium
 
   * Fix structural directories rights
