@@ -374,12 +374,13 @@ case $action in
 		[ ! -d "$EASYRSA_DIR" -o ! -e "$EASYRSA_DIR/build-ca" ] && echo "ERROR : problem occured creating Easy RSA directory." && exit 1
 		echo done.
 
-		EESYVPN_KEY_DIR=$KEY_DIR
 		cd "$EASYRSA_DIR"
-
 		echo "Initialize SSL variables :"
-		cp $OSSL_CNF $EASYRSA_DIR/openssl.cnf
 		source ./vars
+
+		# Run clean-all to auto-create keys dir
+		./clean-all
+
 		export KEY_COUNTRY="$OSSL_VAR_C"
 		export KEY_PROVINCE="$OSSL_VAR_ST"
 		export KEY_CITY="$OSSL_VAR_L"
@@ -391,11 +392,6 @@ case $action in
 
 		mkdir $KEY_DIR
 		./build-ca
-
-		KEY_DIR=$EESYVPN_KEY_DIR
-		echo "Structural directories of CA : "
-		check_directories
-		echo done.
 
 		echo "Copy generated files in CA directory :"
 		echo -n "  - Key ($CAKEY) : "
@@ -409,6 +405,7 @@ case $action in
 		cd $CAHOME
 
 		echo "Clean Easy RSA temporary directory :"
+		cd $CAHOME
 		rm -fr "$EASYRSA_DIR"
 		echo done.
 
@@ -418,7 +415,6 @@ case $action in
 			cp /usr/share/doc/eesyvpn/example/client.ovpn.tpl $OVPN_CNF_CLIENTS_TPL
 			sed -i "s/%%HOSTNAME%%/$name/g" $OVPN_CNF_CLIENTS_TPL
 			sed -i "s/%%VPN_PORT%%/$VPN_PORT/g" $OVPN_CNF_CLIENTS_TPL
-			echo -e "\t- Note: If you want to add more than one remote address edit $OVPN_CNF_CLIENTS_TPL manually"
 			echo done.
 		fi
 
@@ -432,7 +428,7 @@ case $action in
 		echo -n "Create VPN server key and certificate :"
 		$0 create "$name" --server --without-config
 		echo done.
-		SRVKEY=$KEY_DIR/${name}.key
+		SRVKEY=$EESYVPN_KEY_DIR/${name}.key
 		SRVCRT=$CRT_DIR/${name}.crt
 
 		echo "Fixed configuration files access rights :"
@@ -463,8 +459,21 @@ case $action in
 			ln -s $OVPN_SERVER_CNF $OVPN_SERVER_LINK
 			echo done.
 
-			systemctl start openvpn@${VPN_NAME}.service
-			systemctl status openvpn@${VPN_NAME}.service
+			if [ -d /run/systemd/system ]
+			then
+				service=openvpn@$( basename $OVPN_SERVER_LINK|sed 's/\.conf$//' ).service
+
+				echo "Enable service on boot :"
+				/bin/systemctl enable $service
+				echo done.
+
+				echo "Start service : "
+				/bin/systemctl start $service
+				/bin/systemctl status $service
+			else
+				# OpenVPN is enabled by default on init V debian installation
+				/etc/init.d/openvpn start $( basename $OVPN_SERVER_LINK|sed 's/\.conf$//' )
+			fi
 		fi
 	;;
 	list)
